@@ -1,6 +1,7 @@
 package com.abc.SpringBootSecqurityEx.controller;
 
 import com.abc.SpringBootSecqurityEx.dtos.DashboardDTO;
+import com.abc.SpringBootSecqurityEx.entity.User;
 import com.abc.SpringBootSecqurityEx.service.DashboardService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -24,7 +25,7 @@ public class DashboardController {
     }
 
     @GetMapping("/moderator")
-    @PreAuthorize("hasRole('MODERATOR')")
+    @PreAuthorize("hasAnyRole('MODERATOR', 'ADMIN')")
     public DashboardDTO moderatorDashboard(Authentication authentication) {
         return dashboardService.moderatorDashboard(authentication);
     }
@@ -36,8 +37,14 @@ public class DashboardController {
     }
 
     @GetMapping("/premium")
-    @PreAuthorize("hasRole('PREMIUM_USER')")
+    @PreAuthorize("hasAnyRole('PREMIUM_USER', 'ADMIN')")
     public DashboardDTO premiumDashboard(Authentication authentication) {
         return dashboardService.premiumDashboard(authentication);
+    }
+
+    @GetMapping("/data")
+    @PreAuthorize("isAuthenticated()")
+    public DashboardDTO roleBasedDashboard(Authentication authentication) {
+        return dashboardService.roleBasedDashboard(authentication);
     }
 }

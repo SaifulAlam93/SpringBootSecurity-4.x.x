@@ -23,6 +23,36 @@ public class DashboardService {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
     }
+    public DashboardDTO roleBasedDashboard(Authentication authentication) {
+
+        String role = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .map(authority -> authority.replace("ROLE_", ""))
+                .findFirst()
+                .orElse("USER");
+
+        return switch (role) {
+
+            case "ADMIN" ->
+                    adminDashboard(authentication);
+
+            case "MODERATOR" ->
+                    moderatorDashboard(authentication);
+
+            case "PREMIUM_USER" ->
+                    premiumDashboard(authentication);
+
+            case "EMPLOYEE" ->
+                    userDashboard(authentication);
+
+            case "USER" ->
+                    userDashboard(authentication);
+
+            default ->
+                    userDashboard(authentication);
+        };
+    }
 
     public DashboardDTO userDashboard(Authentication authentication) {
         List<ProductEntity> products = productRepository.findAllByActiveTrueOrderByNameAsc();
