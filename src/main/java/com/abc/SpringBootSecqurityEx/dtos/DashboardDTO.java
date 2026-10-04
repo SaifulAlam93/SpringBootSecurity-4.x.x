@@ -16,4 +16,5 @@ public class DashboardDTO {
     private List<String> roles;
     private Map<String, Long> metrics;
     private List<ProductDTO> products;
+    private Map<String, List<DashboardChartDataDTO>> charts;
 }

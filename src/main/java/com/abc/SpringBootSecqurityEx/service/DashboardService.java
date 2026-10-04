@@ -1,6 +1,7 @@
 package com.abc.SpringBootSecqurityEx.service;
 
 import com.abc.SpringBootSecqurityEx.dtos.DashboardDTO;
+import com.abc.SpringBootSecqurityEx.dtos.DashboardChartDataDTO;
 import com.abc.SpringBootSecqurityEx.dtos.ProductDTO;
 import com.abc.SpringBootSecqurityEx.entity.ProductEntity;
 import com.abc.SpringBootSecqurityEx.repository.ProductRepository;
@@ -11,7 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -110,7 +114,46 @@ public class DashboardService {
                 .toList());
         dto.setMetrics(metrics);
         dto.setProducts(products.stream().map(this::toDto).toList());
+        dto.setCharts(buildCharts(dashboardName));
         return dto;
+    }
+
+    private Map<String, List<DashboardChartDataDTO>> buildCharts(String dashboardName) {
+        List<ProductEntity> activeProducts = productRepository.findAllByActiveTrueOrderByNameAsc();
+
+        Map<String, Long> productsByCategory = activeProducts.stream()
+                .collect(Collectors.groupingBy(ProductEntity::getCategory, TreeMap::new, Collectors.counting()));
+        Map<String, Long> stockByLevel = activeProducts.stream()
+                .collect(Collectors.groupingBy(product -> stockLevel(product.getStock()), TreeMap::new, Collectors.counting()));
+
+        Map<String, List<DashboardChartDataDTO>> charts = new LinkedHashMap<>();
+        charts.put("productsByCategory", chartData(productsByCategory));
+        charts.put("productsByType", List.of(
+                new DashboardChartDataDTO("Premium", activeProducts.stream().filter(ProductEntity::getPremium).count()),
+                new DashboardChartDataDTO("Standard", activeProducts.stream().filter(product -> !product.getPremium()).count())
+        ));
+        charts.put("stockByLevel", chartData(stockByLevel));
+
+        if ("admin".equals(dashboardName)) {
+            long enabledUsers = userRepository.countByEnabledTrue();
+            charts.put("usersByStatus", List.of(
+                    new DashboardChartDataDTO("Enabled", enabledUsers),
+                    new DashboardChartDataDTO("Disabled", userRepository.count() - enabledUsers)
+            ));
+        }
+        return charts;
+    }
+
+    private List<DashboardChartDataDTO> chartData(Map<String, Long> values) {
+        return values.entrySet().stream()
+                .map(entry -> new DashboardChartDataDTO(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private String stockLevel(Integer stock) {
+        if (stock < 5) return "Low (0-4)";
+        if (stock < 20) return "Medium (5-19)";
+        return "High (20+)";
     }
 
     private ProductDTO toDto(ProductEntity product) {
